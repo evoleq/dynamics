@@ -50,7 +50,7 @@ class BlockUntilDynamicTest {
         val time = measureTimeMillis {
             list.blockWhileEmpty()
         }
-        assert(time > delay)
+        assert(time >= delay)
         assert(list.value.contains(1))
     }
 }

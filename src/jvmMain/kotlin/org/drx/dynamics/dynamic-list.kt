@@ -15,8 +15,11 @@
  */
 package org.drx.dynamics
 
-import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.drx.dynamics.exec.blockWhileEmpty
+import org.omg.CORBA.INTERNAL
 import kotlin.reflect.KProperty
 
 abstract class DynamicList<T>(list: List<T>) : DynamicCollection<T>(list) {
@@ -31,6 +34,9 @@ abstract class DynamicList<T>(list: List<T>) : DynamicCollection<T>(list) {
 
 open class DynamicArrayList<T>(private val list: ArrayList<T>) : DynamicList<T>(list) {
 
+
+    private val dynamicListContext = newSingleThreadContext("dynymic-list-context")
+    private val mutex = Mutex()
     /**
      * Returns the value of the property for the given object.
      * @param thisRef the object for which the value is requested.
@@ -39,33 +45,83 @@ open class DynamicArrayList<T>(private val list: ArrayList<T>) : DynamicList<T>(
      */
     override fun getValue(thisRef: Any?, property: KProperty<*>): DynamicArrayList<T> = this
 
-    fun add(item: T): Boolean {
-        list.add(item)
-        value = list
-        return true
+    override lateinit var sizeIn: Dynamic<Int>
+    override val size by lazy {
+        scope.launch {
+            sizeIn = push(SizeId::class) {
+                withContext(dynamicListContext) {
+                    mutex.withLock {
+                        list.size
+                    }
+                }
+            }
+        }
+        while(!::sizeIn.isInitialized) {
+            Thread.sleep(1)
+        }
+        sizeIn
     }
-    fun add(index: Int, item: T): Boolean {
-        list.add(index,item)
-        value = list
-        return true
+    override lateinit var isEmptyIn: Dynamic<Boolean>
+    override val isEmpty by lazy {
+        scope.launch {
+            isEmptyIn = push(IsEmpty::class) {
+                withContext(dynamicListContext){
+                    mutex.withLock {
+                        list.isEmpty()
+                    }
+                }
+            }
+        }
+        while(!::isEmptyIn.isInitialized) {
+            Thread.sleep(1)
+        }
+        isEmptyIn
     }
-    fun pop(): T = with(list.first()) {
-        list.removeAt(0)
-        value = list//value.drop(1)
-        this
+
+
+    suspend fun add(item: T): Boolean = coroutineScope{
+        withContext(dynamicListContext){
+            mutex.withLock {
+                list.add(item)
+                value = list
+                true
+            }
+        }
+    }
+    suspend fun add(index: Int, item: T): Boolean = coroutineScope{
+        withContext(dynamicListContext){
+            mutex.withLock {
+                list.add(index, item)
+                value = list
+                true
+            }
+        }
+    }
+    suspend fun pop(): T  = coroutineScope{
+        withContext(dynamicListContext) {
+            with(list.first()) {
+                mutex.withLock {
+                    list.removeAt(0)
+                    value = list//value.drop(1)
+                    this
+                }
+            }
+        }
     }
     // todo("Implement array-list and list-methods)
 
     inline fun <reified S> map(noinline f: (T)->S): DynamicArrayList<S> =
         DynamicArrayList(arrayListOf(*value.map(f).toTypedArray()))
+
 }
 
-suspend fun <S,T> DynamicArrayList<S>.onNext(action: suspend CoroutineScope.(S)->T): T = with( scope) {
+suspend fun <S,T> DynamicArrayList<S>.onNext(action: suspend CoroutineScope.(S)->T): T = with( scope ) {
     blockWhileEmpty()
     //val oldSize = size.value
     //println("list-size = $oldSize")
     with(pop()) {
-      //  blockUntil(size){it < oldSize}
+        //  blockUntil(size){it < oldSize}
         action(this)
     }
+
 }

@@ -15,9 +15,12 @@
  */
 package org.drx.dynamics
 
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
+import kotlin.test.assertEquals
 
 class DynamicArrayListTest {
     @Test fun list() = runBlocking {
@@ -40,5 +43,24 @@ class DynamicArrayListTest {
         delay(10)
         assert(containsOneAndTwo.value)
 
+    }
+    @Test fun `add and remove`() = runBlocking{
+        val list = arrayListOf<Int>()
+        val dynamicList by DynamicArrayList(list)
+        dynamicList.add(0)
+        val popped = dynamicList.pop()
+        assertEquals(0,popped)
+
+        GlobalScope.launch {
+            with(dynamicList.onNext {
+                next -> next
+            }) {
+                println(this)
+            }
+        }
+        delay(1_000)
+        dynamicList.add(1)
+
+        delay(1_000)
     }
 }

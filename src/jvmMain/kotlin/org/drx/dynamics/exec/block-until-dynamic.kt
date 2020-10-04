@@ -20,7 +20,7 @@ import org.drx.dynamics.markers.EvoleqDsl
 
 
 /**
- * Block coroutine execution while a [SmartArrayList] is empty
+ * Block coroutine execution while a [ArrayList] is empty
  */
 @EvoleqDsl
 suspend fun <T> DynamicArrayList<T>.blockWhileEmpty() {

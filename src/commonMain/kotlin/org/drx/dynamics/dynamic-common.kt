@@ -15,10 +15,7 @@
  */
 package org.drx.dynamics
 
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import org.drx.dynamics.markers.EvoleqDsl
 import kotlin.properties.Delegates
 import kotlin.properties.ReadOnlyProperty
@@ -54,28 +51,31 @@ open class Dynamic<T>(private val initialValue : T, val scope: CoroutineScope = 
 
     //fun value(): ReadWriteProperty<Any?, T> = prop
     var value: T by prop
-    private val subscriptions = arrayListOf<Pair<ID,(T)->Unit>>()
+    private val subscriptions = arrayListOf<Pair<ID,suspend (T)->Unit>>()
 
-    fun subscribe(id: ID, onNext: (T)->Unit) {
+    fun subscribe(id: ID, onNext: suspend (T)->Unit) {
         subscriptions.add(id to onNext)
     }
     fun unsubscribe(id: ID) {
         val toRemove = subscriptions.find { it.first == id }
         subscriptions.remove(toRemove) //{ it.first == id }
     }
-    fun<S> push(id: ID, scope: CoroutineScope = this.scope, f: (T)->S ): Dynamic<S> {
+    suspend fun<S> push(id: ID, scope: CoroutineScope = this.scope, f: suspend (T)->S ): Dynamic<S> {
         val dynamic by Dynamic(f(value),scope)
         subscribe(id){
-            dynamic.value = f(it)
+           // GlobalScope.launch {
+                dynamic.value = f(it)
+           // }
         }
         return dynamic
     }
+
 }
 
 fun <T> CoroutineScope.dynamic(initialValue : T) = Dynamic(initialValue,this)
 class IsNotNull
 @EvoleqDsl
-fun <T> Dynamic<T?>.isNotNull(): Dynamic<Boolean> = push(IsNotNull::class) {
+suspend fun <T> Dynamic<T?>.isNotNull(): Dynamic<Boolean> = push(IsNotNull::class) {
     it != null
 }
 
