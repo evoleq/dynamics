@@ -12,7 +12,7 @@ open class DynamicArrayList<T>(private val initialValue: ArrayList<T>) : Dynamic
 
 
     //private val dynamicListContext = newSingleThreadContext("dynymic-list-context")
-    private val mutex = Mutex()
+    //private val mutex = Mutex()
 
     /**
      * Returns the value of the property for the given object.
@@ -41,11 +41,14 @@ open class DynamicArrayList<T>(private val initialValue: ArrayList<T>) : Dynamic
         scope.launch {
             isEmptyIn = push(IsEmpty::class) { initialValue.isEmpty() }
         }
+        /*
         while(!::isEmptyIn.isInitialized) {
             window.setTimeout(
                 {},1
             )
         }
+
+         */
         isEmptyIn
     }
 

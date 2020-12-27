@@ -16,30 +16,35 @@
 package org.drx.dynamics.exec
 
 import kotlinx.coroutines.*
-import org.drx.dynamics.DynamicArrayList
-import org.drx.dynamics.DynamicBoolean
-import org.junit.Test
-import kotlin.system.measureTimeMillis
+import org.drx.dynamics.Dynamic
+import org.evoleq.test.runTest
+import kotlin.test.Test
+import kotlin.test.assertTrue
+import kotlin.time.ExperimentalTime
+import kotlin.time.measureTime
 
-class BlockUntilDynamicTestJvm {
+class BlockUntilDynamicTestCommon {
 
 
+    @ExperimentalTime
     @Test
-    fun blockUntilDynamic() = runBlocking {
-        val bool by DynamicBoolean(false)
+    fun blockUntilDynamic() = runTest {
+        val bool by Dynamic<Boolean>(false)
         val delay = 1_000L
         CoroutineScope(Job()).async { coroutineScope {
             delay(delay)
             bool.value = true
         } }
-        var time = System.currentTimeMillis()
-        blockUntil(bool) { value -> value }
-        time = System.currentTimeMillis() - time
-        assert(time > delay)
+        val time = measureTime {
+            blockUntil(bool) { value -> value }
+            
+        }.inMilliseconds
+        assertTrue(time > delay)
 
     }
+    /*
     @Test
-    fun blockWhileEmptyDynamic() = runBlocking {
+    fun blockWhileEmptyDynamic() = runTest {
         val list = DynamicArrayList<Int>(arrayListOf())
         val delay = 1_000L
         CoroutineScope(Job()).async { coroutineScope {
@@ -52,4 +57,6 @@ class BlockUntilDynamicTestJvm {
         assert(time >= delay)
         assert(list.value.contains(1))
     }
+    
+     */
 }

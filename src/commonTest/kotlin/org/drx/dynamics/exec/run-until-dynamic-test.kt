@@ -17,45 +17,49 @@ package org.drx.dynamics.exec
 
 import kotlinx.coroutines.*
 import org.drx.dynamics.Dynamic
-import org.junit.Test
-import kotlin.system.measureTimeMillis
+import org.evoleq.test.runTest
+import kotlin.test.Test
+import kotlin.test.assertTrue
+import kotlin.time.ExperimentalTime
+import kotlin.time.measureTime
 
-class RunUntilDynamicTestCommon {
+class RunUntilDynamicTest {
 
+    @ExperimentalTime
     @Test
-    fun runUntil() = runBlocking {
+    fun runUntil() = runTest {
         val condition by Dynamic("")
         CoroutineScope(Job()).async { coroutineScope {
             delay(1_000)
             condition.value = "SET"
         }}
         var result:Unit? = null
-        var time = measureTimeMillis {
+        val time = measureTime {
             result = runUntil(condition, { s -> s == "SET" }) {
                 delay(10_000)
             }
-        }
+        }.inMilliseconds
         println(time)
-        assert(time < 2_100)
-        assert(result == null)
+        assertTrue(time < 2_100)
+        assertTrue(result == null)
         var result1: Unit? = null
         CoroutineScope(Job()).async { coroutineScope {
             delay(1_500)
             condition.value = "SET_1"
         }}
-        val time1 = measureTimeMillis {
+        val time1 = measureTime {
 
             result1 = runUntil(condition, { s -> s == "SET_1" }) {
                 delay(1_000)
                 Unit
             }
-        }
+        }.inMilliseconds
         println(time1)
-        assert(time1>=1_000)
-        assert(result1 == Unit)
+        assertTrue(time1>=1_000)
+        assertTrue(result1 == Unit)
     }
 
-    @Test fun runUntilWithDecomposedFunctions() = runBlocking {
+    @Test fun runUntilWithDecomposedFunctions() = runTest {
         val dynamic by Dynamic("")
         val result = run{delay(1_000)} until dynamic.push(this::class){s -> s == "SET"}.isTrue()
         dynamic.value = "SET"
@@ -66,16 +70,16 @@ class RunUntilDynamicTestCommon {
             dynamic.value = "SET"
         }}
         val result1: Int? = run{delay(10_000); 3} until dynamic.fulfills {s -> s == "SET"}
-        assert(result1 == null)
+        assertTrue(result1 == null)
     }
 
-    @Test fun runAsLongAsDecomposedFunctions () = runBlocking {
+    @Test fun runAsLongAsDecomposedFunctions () = runTest {
         val condition by Dynamic(0)
         CoroutineScope(Job()).async { coroutineScope {
             delay(500)
             condition.value = 1
         }}
         val result = run { delay(1000) } asLongAs (condition fulfills { x: Int -> x <= 0 })
-        assert(result == null)
+        assertTrue(result == null)
     }
 }

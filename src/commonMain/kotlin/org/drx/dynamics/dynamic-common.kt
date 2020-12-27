@@ -16,6 +16,8 @@
 package org.drx.dynamics
 
 import kotlinx.coroutines.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.drx.dynamics.markers.EvoleqDsl
 import kotlin.properties.Delegates
 import kotlin.properties.ReadOnlyProperty
@@ -34,31 +36,53 @@ open class Dynamic<T>(private val initialValue : T, val scope: CoroutineScope = 
      */
     override fun getValue(thisRef: Any?, property: KProperty<*>): Dynamic<T> = this
 
+    val mutex = Mutex()
+    val context = Dispatchers.Unconfined
+
     private val  prop : ReadWriteProperty<Any?, T>
+    private val subscriptions = arrayListOf<Pair<ID,suspend (T)->Unit>>()
     init {
         prop = Delegates.observable(initialValue) { property, oldValue, newValue ->
             //if(newValue != oldValue) {
-                subscriptions.forEach {
-                    scope.launch {
-                        coroutineScope {
-                            it.second(newValue)
-                        }
-                    }
+                scope.launch {
+                    //withContext(context) {
+                        //mutex.withLock {
+                            subscriptions.asSequence().forEach {
+                                scope.launch {
+                                    //coroutineScope {
+                                    it.second(newValue)
+                                    //}
+                                }
+                            }
+                        //}
+                    //}
                 }
-           //}
+            //}
         }
     }
 
     //fun value(): ReadWriteProperty<Any?, T> = prop
     var value: T by prop
-    private val subscriptions = arrayListOf<Pair<ID,suspend (T)->Unit>>()
+
 
     fun subscribe(id: ID, onNext: suspend (T)->Unit) {
-        subscriptions.add(id to onNext)
+        scope.launch {
+            //withContext(context) {
+                //mutex.withLock {
+                    subscriptions.add(id to onNext)
+                //}
+            //}
+        }
     }
     fun unsubscribe(id: ID) {
-        val toRemove = subscriptions.find { it.first == id }
-        subscriptions.remove(toRemove) //{ it.first == id }
+        scope.launch {
+            //withContext(context) {
+                //mutex.withLock {
+                    val toRemove = subscriptions.find { it.first == id }
+                    subscriptions.remove(toRemove) //{ it.first == id }
+                //}
+            //}
+        }
     }
     suspend fun<S> push(id: ID, scope: CoroutineScope = this.scope, f: suspend (T)->S ): Dynamic<S> {
         val dynamic by Dynamic(f(value),scope)

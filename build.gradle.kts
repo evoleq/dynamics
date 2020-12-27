@@ -25,6 +25,10 @@ kotlin {
     /* Targets configuration omitted.
     *  To find out how to configure the targets, please follow the link:
     *  https://kotlinlang.org/docs/reference/building-mpp-with-gradle.html#setting-up-targets */
+    js{
+        browser()
+        nodejs()
+    }
     jvm().compilations["main"].defaultSourceSet {
         dependencies {
             implementation(kotlin("stdlib-jdk8"))
@@ -47,7 +51,12 @@ kotlin {
         }
         /* ... */
     }
-    js().compilations["test"].defaultSourceSet {/* ... */ }
+    js().compilations["test"].defaultSourceSet {
+        dependencies {
+            implementation(kotlin("test-js"))
+            implementation(kotlin("test-js-runner"))
+        }
+    }
 
     sourceSets {
         val commonMain by getting {
@@ -61,6 +70,7 @@ kotlin {
             dependencies {
                 implementation(kotlin("test-common"))
                 implementation(kotlin("test-annotations-common"))
+                implementation(project(":mpp-test"))
             }
         }
     }

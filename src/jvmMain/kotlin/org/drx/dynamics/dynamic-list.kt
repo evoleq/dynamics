@@ -35,8 +35,8 @@ abstract class DynamicList<T>(list: List<T>) : DynamicCollection<T>(list) {
 open class DynamicArrayList<T>(private val list: ArrayList<T>) : DynamicList<T>(list) {
 
 
-    private val dynamicListContext = newSingleThreadContext("dynymic-list-context")
-    private val mutex = Mutex()
+    private val dynamicListContext = newSingleThreadContext("dynamic-list-context")
+    //private val mutex = Mutex()
     /**
      * Returns the value of the property for the given object.
      * @param thisRef the object for which the value is requested.
@@ -81,6 +81,7 @@ open class DynamicArrayList<T>(private val list: ArrayList<T>) : DynamicList<T>(
 
     suspend fun add(item: T): Boolean = coroutineScope{
         withContext(dynamicListContext){
+
             mutex.withLock {
                 list.add(item)
                 value = list
@@ -97,10 +98,21 @@ open class DynamicArrayList<T>(private val list: ArrayList<T>) : DynamicList<T>(
             }
         }
     }
+    suspend fun removeFirst(){
+        withContext(dynamicListContext){
+            mutex.withLock {
+                if(list.isNotEmpty()){
+                    list.removeAt(0)
+                    value = list
+                }
+            }
+        }
+    }
     suspend fun pop(): T  = coroutineScope{
         withContext(dynamicListContext) {
-            with(list.first()) {
-                mutex.withLock {
+            mutex.withLock {
+
+                with(list.first()) {
                     list.removeAt(0)
                     value = list//value.drop(1)
                     this
@@ -119,9 +131,11 @@ suspend fun <S,T> DynamicArrayList<S>.onNext(action: suspend CoroutineScope.(S)-
     blockWhileEmpty()
     //val oldSize = size.value
     //println("list-size = $oldSize")
-    with(pop()) {
+    with(pop()!!) {
         //  blockUntil(size){it < oldSize}
         action(this)
     }
 
 }
+
+

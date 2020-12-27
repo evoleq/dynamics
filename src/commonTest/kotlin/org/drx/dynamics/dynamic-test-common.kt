@@ -16,11 +16,13 @@
 package org.drx.dynamics
 
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.runBlocking
-import org.junit.Test
+import org.evoleq.test.runTest
+import kotlin.test.Test
+import kotlin.test.assertTrue
 
-class DynamicTest {
-    @Test fun dynamic() = runBlocking{
+class DynamicTestCommon {
+    @Test
+    fun dynamic() = runTest{
         class Dynamic
         val dynamic by Dynamic(0)
         dynamic.subscribe(Dynamic::class){
@@ -33,10 +35,10 @@ class DynamicTest {
         delay(50)
         dynamic.value = 2
         delay(100)
-        assert(pushed.value == 4)
+        assertTrue(pushed.value == 4)
         dynamic.unsubscribe(Pushed::class)
         dynamic.value = 3
-        assert(pushed.value == 4)
+        assertTrue(pushed.value == 4)
     }
 
 }
