@@ -45,8 +45,8 @@ open class Dynamic<T>(private val initialValue : T, val scope: CoroutineScope = 
         prop = Delegates.observable(initialValue) { property, oldValue, newValue ->
             //if(newValue != oldValue) {
                 scope.launch {
-                    //withContext(context) {
-                        //mutex.withLock {
+                    withContext(context) {
+                        mutex.withLock {
                             subscriptions.asSequence().forEach {
                                 scope.launch {
                                     //coroutineScope {
@@ -54,8 +54,8 @@ open class Dynamic<T>(private val initialValue : T, val scope: CoroutineScope = 
                                     //}
                                 }
                             }
-                        //}
-                    //}
+                        }
+                    }
                 }
             //}
         }
@@ -67,29 +67,29 @@ open class Dynamic<T>(private val initialValue : T, val scope: CoroutineScope = 
 
     fun subscribe(id: ID, onNext: suspend (T)->Unit) {
         scope.launch {
-            //withContext(context) {
-                //mutex.withLock {
+            withContext(context) {
+                mutex.withLock {
                     subscriptions.add(id to onNext)
-                //}
-            //}
+                }
+            }
         }
     }
     fun unsubscribe(id: ID) {
         scope.launch {
-            //withContext(context) {
-                //mutex.withLock {
+            withContext(context) {
+                mutex.withLock {
                     val toRemove = subscriptions.find { it.first == id }
                     subscriptions.remove(toRemove) //{ it.first == id }
-                //}
-            //}
+                }
+            }
         }
     }
-    suspend fun<S> push(id: ID, scope: CoroutineScope = this.scope, f: suspend (T)->S ): Dynamic<S> {
+    suspend fun<S> push(id: ID, scope: CoroutineScope = CoroutineScope(Job()), f: suspend (T)->S ): Dynamic<S> {
         val dynamic by Dynamic(f(value),scope)
         subscribe(id){
-           // GlobalScope.launch {
+            scope.launch {
                 dynamic.value = f(it)
-           // }
+            }
         }
         return dynamic
     }

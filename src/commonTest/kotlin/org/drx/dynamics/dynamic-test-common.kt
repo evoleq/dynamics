@@ -40,5 +40,5 @@ class DynamicTestCommon {
         dynamic.value = 3
         assertTrue(pushed.value == 4)
     }
-
+    
 }

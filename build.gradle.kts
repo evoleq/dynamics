@@ -27,7 +27,7 @@ kotlin {
     *  https://kotlinlang.org/docs/reference/building-mpp-with-gradle.html#setting-up-targets */
     js{
         browser()
-        nodejs()
+        //nodejs()
     }
     jvm().compilations["main"].defaultSourceSet {
         dependencies {
